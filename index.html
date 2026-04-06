@@ -181,6 +181,13 @@ html,body{height:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Ma
 
 /* 토스트 */
 
+
+.pay-method-row{display:flex;gap:6px;margin-top:6px}
+.pay-btn{flex:1;padding:7px 4px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--muted);transition:all .15s;font-family:inherit;text-align:center}
+.pay-btn.sel-카드{background:#E6F1FB;color:#0C447C;border-color:#378ADD}
+.pay-btn.sel-현금{background:#E1F5EE;color:#0F6E56;border-color:#1D9E75}
+.pay-btn.sel-계좌이체{background:#EEEDFE;color:#534AB7;border-color:#7F77DD}
+
 .attend-btn{padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:11px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--muted);transition:all .15s;font-family:inherit}
 .attend-btn.sel-출석{background:#E1F5EE;color:#0F6E56;border-color:#1D9E75}
 .attend-btn.sel-결석{background:#FCEBEB;color:#A32D2D;border-color:#E24B4A}
@@ -276,6 +283,7 @@ html,body{height:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Ma
       <div class="form-group"><label class="form-label">결제금액</label><input class="form-input" type="number" id="f-payment" placeholder="300000"></div>
       <div class="form-group"><label class="form-label">결제일</label><input class="form-input" type="date" id="f-paydate"></div>
     </div>
+    <div class="form-group"><label class="form-label">결제 방법</label><div class="pay-method-row"><button type="button" class="pay-btn" id="pb-카드" onclick="selectPayMethod('카드')">카드</button><button type="button" class="pay-btn" id="pb-현금" onclick="selectPayMethod('현금')">현금</button><button type="button" class="pay-btn" id="pb-계좌이체" onclick="selectPayMethod('계좌이체')">계좌이체</button></div></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">레슨 요일</label><input class="form-input" id="f-days" placeholder="월,수,금"></div>
       <div class="form-group"><label class="form-label">레슨 시간</label><input class="form-input" id="f-time" placeholder="10:00"></div>
@@ -412,6 +420,7 @@ function normalizeStudent(s) {
   s.total = parseInt(s.total) || 0;
   s.remain = parseInt(s.remain) || 0;
   s.payment = parseInt(s.payment) || 0;
+  s.paymethod = s.paymethod || '';
   return s;
 }
 function normalizeInsole(i) {
@@ -547,6 +556,7 @@ function renderStudents() {
   if(!ss.length) list += '<div class="empty">수강생 없음</div>';
   else ss.forEach(function(s, idx) {
     var pct = s.total > 0 ? Math.round((s.total - s.remain) / s.total * 100) : 0;
+    var pmBadge = s.paymethod ? '<span class="badge" style="background:' + (s.paymethod==='카드'?'#E6F1FB':s.paymethod==='현금'?'#E1F5EE':'#EEEDFE') + ';color:' + (s.paymethod==='카드'?'#0C447C':s.paymethod==='현금'?'#0F6E56':'#534AB7') + ';margin-left:4px;font-size:9px">' + s.paymethod + '</span>' : '';
     var pcls = parseInt(s.remain) <= 2 ? 'low' : parseInt(s.remain) <= 5 ? 'mid' : '';
     list += '<div class="list-item"><div class="avatar av-lesson">' + s.name[0] + '</div>';
     list += '<div class="item-main"><div class="item-name">' + s.name + ' <span class="badge b-end" style="font-size:9px">' + s.type + '</span></div>';
@@ -766,6 +776,7 @@ function openStudentModal() {
   document.getElementById('f-days').value = '';
   document.getElementById('f-time').value = '';
   document.getElementById('f-status').value = '활성';
+  selectPayMethod('');
   document.getElementById('modal-student').classList.add('open');
 }
 
@@ -784,6 +795,7 @@ function openStudentEdit(idx) {
   document.getElementById('f-days').value = s.days;
   document.getElementById('f-time').value = s.time;
   document.getElementById('f-status').value = s.status;
+  selectPayMethod(s.paymethod || '');
   document.getElementById('modal-student').classList.add('open');
 }
 
@@ -801,6 +813,7 @@ function saveStudent() {
     remain: parseInt(document.getElementById('f-remain').value) || 0,
     payment: pay,
     paydate: document.getElementById('f-paydate').value,
+    paymethod: currentPayMethod,
     days: document.getElementById('f-days').value,
     time: document.getElementById('f-time').value,
     status: document.getElementById('f-status').value
@@ -814,7 +827,7 @@ function saveStudent() {
       students.push(normalizeStudent(data));
       // 결제금액이 있으면 매출내역에도 추가
       if(pay > 0) {
-        var tx = { id: String(Date.now()+1), date: data.paydate, source: '레슨', item: n + ' 레슨비', amount: pay, branch: data.branch };
+        var pm = data.paymethod ? ' ['+data.paymethod+']' : ''; var tx = { id: String(Date.now()+1), date: data.paydate, source: '레슨', item: n + ' 레슨비' + pm, amount: pay, branch: data.branch };
         apiPost({ action: 'saveTx', data: tx }, function(){});
         transactions.push(tx);
       }
@@ -947,6 +960,20 @@ function hideAc() { var l = document.getElementById('ac-list'); if(l) l.classLis
 //  유틸
 // ══════════════════════════════════════════
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+
+// ══════════════════════════════════════════
+//  결제 방법 선택
+// ══════════════════════════════════════════
+var currentPayMethod = '';
+
+function selectPayMethod(method) {
+  currentPayMethod = method;
+  ['카드','현금','계좌이체'].forEach(function(m) {
+    var btn = document.getElementById('pb-' + m);
+    if(btn) btn.className = 'pay-btn' + (method === m ? ' sel-' + m : '');
+  });
+}
 
 // ══════════════════════════════════════════
 //  당일 레슨 수정
