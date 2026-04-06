@@ -180,6 +180,16 @@ html,body{height:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Ma
 .ac-sub{font-size:10px;color:var(--muted);margin-top:1px}
 
 /* 토스트 */
+
+.attend-btn{padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:11px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--muted);transition:all .15s;font-family:inherit}
+.attend-btn.sel-출석{background:#E1F5EE;color:#0F6E56;border-color:#1D9E75}
+.attend-btn.sel-결석{background:#FCEBEB;color:#A32D2D;border-color:#E24B4A}
+.attend-btn.sel-보강{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.lesson-edit-card{background:var(--surface);border:1.5px solid var(--lesson);border-radius:var(--radius);padding:12px;margin-bottom:10px}
+.lesson-complete-btn{width:100%;padding:10px;border-radius:var(--radius-sm);border:none;background:var(--lesson);color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;font-family:inherit}
+.lesson-complete-btn:disabled{background:var(--faint);cursor:default}
+.lesson-complete-btn.done{background:#888780}
+
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A18;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:all .25s;z-index:500;white-space:nowrap;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -473,10 +483,27 @@ function renderDashboard() {
   html += '</div>';
 
   // 오늘 레슨
-  html += '<div class="card lesson"><div class="card-title">오늘 레슨 <span style="font-size:11px;color:var(--muted)">' + (today.getMonth()+1) + '/' + today.getDate() + ' ' + DAYS[today.getDay()] + '요일</span></div>';
+  html += '<div class="card lesson"><div class="card-title">오늘 레슨 <span style="font-size:11px;color:var(--muted)">' + (today.getMonth()+1) + '/' + today.getDate() + ' ' + DAYS[today.getDay()] + '요일</span><button class="btn btn-sm btn-lesson" style="margin-left:auto;font-size:10px" onclick="setTab(\"schedule\",document.querySelectorAll(\".tab-item\")[2],\"lesson\")">전체보기</button></div>';
   if(!todayLessons.length) html += '<div class="empty">오늘 레슨 없음</div>';
   else todayLessons.forEach(function(s){
-    html += '<div class="list-item"><div class="avatar av-lesson">' + s.name[0] + '</div><div class="item-main"><div class="item-name">' + s.name + '</div><div class="item-sub">' + s.time + ' · ' + s.type + '</div></div><div class="item-right"><span class="badge ' + (parseInt(s.remain)<=3?'b-pause':'b-active') + '">' + s.remain + '회 남음</span></div></div>';
+    var idx = students.indexOf(s);
+    var att = s._attend || '';
+    var done = s._done || false;
+    html += '<div class="lesson-edit-card">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    html += '<div class="avatar av-lesson">' + s.name[0] + '</div>';
+    html += '<div style="flex:1"><div style="font-size:14px;font-weight:600">' + s.name + '</div>';
+    html += '<div style="font-size:11px;color:var(--muted)">' + s.time + ' · ' + s.type + ' · 잔여 <strong>' + s.remain + '회</strong></div></div>';
+    html += '<span class="badge ' + (done?'b-end':parseInt(s.remain)<=3?'b-pause':'b-active') + '">' + (done?'완료':s.remain+'회') + '</span>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;margin-bottom:8px">';
+    ['출석','결석','보강'].forEach(function(a){
+      html += '<button class="attend-btn ' + (att===a?'sel-'+a:'') + '" onclick="setAttend(' + idx + ',\"' + a + '\")">' + a + '</button>';
+    });
+    html += '</div>';
+    html += '<input type="text" class="form-input" style="font-size:12px;padding:7px 10px;margin-bottom:8px" placeholder="메모 (부상,특이사항 등)" value="' + (s._memo||'') + '" onchange="students[' + idx + ']._memo=this.value" id="memo-' + idx + '">';
+    html += '<button class="lesson-complete-btn ' + (done?'done':'') + '" ' + (done?'disabled':'') + ' onclick="completeLesson(' + idx + ')">' + (done?'✓ 완료됨':'레슨 완료 (회차 차감)') + '</button>';
+    html += '</div>';
   });
   html += '</div>';
 
@@ -565,12 +592,34 @@ function renderSchedule() {
 }
 
 function selectCalDay(d, dow) {
+  var isToday = (calY===today.getFullYear()&&calM===today.getMonth()&&d===today.getDate());
   var lessons = fS().filter(function(s){ return s.status!=='종료'&&s.days&&s.days.split(',').map(function(x){return x.trim();}).indexOf(DAYS[dow])>=0; });
   lessons.sort(function(a,b){ return a.time.localeCompare(b.time); });
   var html = '<div class="card-title">' + (calM+1) + '월 ' + d + '일 ' + DAYS[dow] + '요일 <span style="font-size:11px;color:var(--muted)">' + lessons.length + '명</span></div>';
   if(!lessons.length) html += '<div class="empty">레슨 없음</div>';
   else lessons.forEach(function(s){
-    html += '<div class="list-item"><div class="avatar av-lesson">' + s.name[0] + '</div><div class="item-main"><div class="item-name">' + s.name + '</div><div class="item-sub">' + s.type + ' · 잔여 ' + s.remain + '회</div></div><div class="item-right" style="font-size:13px;font-weight:600">' + s.time + '</div></div>';
+    var idx = students.indexOf(s);
+    var att = s._attend || '';
+    var done = s._done || false;
+    if(isToday) {
+      html += '<div class="lesson-edit-card">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+      html += '<div class="avatar av-lesson">' + s.name[0] + '</div>';
+      html += '<div style="flex:1"><div style="font-size:14px;font-weight:600">' + s.name + '</div>';
+      html += '<div style="font-size:11px;color:var(--muted)">' + s.time + ' · ' + s.type + ' · 잔여 <strong>' + s.remain + '회</strong></div></div>';
+      html += '<span class="badge ' + (done?'b-end':parseInt(s.remain)<=3?'b-pause':'b-active') + '">' + (done?'완료':s.remain+'회') + '</span>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:6px;margin-bottom:8px">';
+      ['출석','결석','보강'].forEach(function(a){
+        html += '<button class="attend-btn ' + (att===a?'sel-'+a:'') + '" onclick="setAttendCal(' + idx + ',\'' + a + '\')">' + a + '</button>';
+      });
+      html += '</div>';
+      html += '<input type="text" class="form-input" style="font-size:12px;padding:7px 10px;margin-bottom:8px" placeholder="메모" value="' + (s._memo||'') + '" onchange="students[' + idx + ']._memo=this.value">';
+      html += '<button class="lesson-complete-btn ' + (done?'done':'') + '" ' + (done?'disabled':'') + ' onclick="completeLessonCal(' + idx + ')">' + (done?'✓ 완료됨':'레슨 완료 (회차 차감)') + '</button>';
+      html += '</div>';
+    } else {
+      html += '<div class="list-item"><div class="avatar av-lesson">' + s.name[0] + '</div><div class="item-main"><div class="item-name">' + s.name + '</div><div class="item-sub">' + s.type + ' · 잔여 ' + s.remain + '회</div></div><div class="item-right" style="font-size:13px;font-weight:600">' + s.time + '</div></div>';
+    }
   });
   var card = document.getElementById('sel-day-card');
   if(card) card.innerHTML = html;
@@ -898,6 +947,79 @@ function hideAc() { var l = document.getElementById('ac-list'); if(l) l.classLis
 //  유틸
 // ══════════════════════════════════════════
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ══════════════════════════════════════════
+//  당일 레슨 수정
+// ══════════════════════════════════════════
+function setAttend(idx, att) {
+  students[idx]._attend = att;
+  renderDashboard();
+}
+
+function setAttendCal(idx, att) {
+  students[idx]._attend = att;
+  var dow = new Date(calY, calM, selectedCalDay).getDay();
+  selectCalDay(selectedCalDay, dow);
+}
+
+var selectedCalDay = today.getDate();
+var _origSelectCalDay = selectCalDay;
+// 선택된 날 기억
+var _wrappedSelectCalDay = function(d, dow) {
+  selectedCalDay = d;
+  _origSelectCalDay(d, dow);
+};
+
+function completeLesson(idx) {
+  var s = students[idx];
+  if(s._done) return;
+  if(!s._attend) {
+    toast('출석 상태를 먼저 선택하세요');
+    return;
+  }
+  var memo = s._memo || '';
+  var attLabel = s._attend;
+
+  // 결석이면 회차 차감 안 함
+  if(s._attend === '출석' || s._attend === '보강') {
+    var newRemain = Math.max(0, parseInt(s.remain) - 1);
+    students[idx].remain = newRemain;
+    // 시트에 저장
+    apiPost({ action: 'saveStudent', data: students[idx] }, function(err) {
+      if(err) { toast('저장 오류: ' + err); return; }
+      toast('✓ ' + s.name + ' 레슨 완료 · 잔여 ' + newRemain + '회');
+    });
+  } else {
+    toast('✓ ' + s.name + ' 결석 처리됨');
+  }
+
+  students[idx]._done = true;
+  students[idx]._attend = attLabel;
+  renderDashboard();
+}
+
+function completeLessonCal(idx) {
+  var s = students[idx];
+  if(s._done) return;
+  if(!s._attend) {
+    toast('출석 상태를 먼저 선택하세요');
+    return;
+  }
+  if(s._attend === '출석' || s._attend === '보강') {
+    var newRemain = Math.max(0, parseInt(s.remain) - 1);
+    students[idx].remain = newRemain;
+    apiPost({ action: 'saveStudent', data: students[idx] }, function(err) {
+      if(err) { toast('저장 오류: ' + err); return; }
+      toast('✓ ' + s.name + ' 레슨 완료 · 잔여 ' + newRemain + '회');
+    });
+  } else {
+    toast('✓ ' + s.name + ' 결석 처리됨');
+  }
+  students[idx]._done = true;
+  var dow = new Date(calY, calM, selectedCalDay).getDay();
+  selectCalDay(selectedCalDay, dow);
+}
+
 
 function toast(msg) {
   var t = document.getElementById('toast');
