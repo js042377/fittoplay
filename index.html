@@ -707,8 +707,7 @@ function renderInsole() {
     var revDiff = ins2.revdate ? Math.ceil((new Date(ins2.revdate)-nowD)/(1000*60*60*24)) : null;
     var revLabel = revDiff !== null ? (revDiff<0?'수정기한초과':revDiff===0?'오늘수정':'수정 D-'+revDiff) : '';
     var revColor = revDiff !== null ? (revDiff<0?'var(--danger)':revDiff<=7?'var(--warn)':'var(--insole)') : '';
-    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+ins2.phone+' · 접수 '+ins2.date+' · 납기 <span style="color:'+(od?'var(--danger)':'var(--text)')+';font-weight:'+(od?'600':'400')+'">'+"
-ins2.due+(od?' ⚠':'')+'</span>'+(ins2.revdate?'&nbsp;·&nbsp;<span style="color:'+revColor+';font-weight:600">'+revLabel+'</span>':'')+'</div>';
+    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+ins2.phone+' · 접수 '+ins2.date+' · 납기 <span style="color:'+(od?'var(--danger)':'var(--text)')+';font-weight:'+(od?'600':'400')+'">'+ins2.due+(od?' ⚠':'')+'</span>'+(ins2.revdate?'&nbsp;·&nbsp;<span style="color:'+revColor+';font-weight:600">'+revLabel+'</span>':'')+'</div>';
     html += '<div class="igrid">';
     html += '<div class="ibox"><div class="ilbl">발 사이즈</div><div class="ival">'+ins2.size+'mm</div></div>';
     html += '<div class="ibox"><div class="ilbl">아치</div><div class="ival">'+(ins2.arch||'-')+'</div></div>';
