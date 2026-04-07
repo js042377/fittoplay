@@ -60,6 +60,11 @@ html,body{height:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Ma
 .b-측정{background:var(--warn-bg);color:#633806}
 .b-제작중{background:var(--insole-l);color:var(--insole-d)}
 .b-전달완료{background:var(--success-bg);color:var(--tennis-d)}
+
+.b-수정임박{background:#FAEEDA;color:#633806}
+.b-수정예약{background:#EEEDFE;color:#534AB7}
+.revcard{background:var(--surface);border:1.5px solid var(--warn);border-radius:var(--r);padding:11px;margin-bottom:8px}
+
 .b-트레이닝{background:var(--tennis-l);color:var(--tennis-d)}
 .b-인솔{background:var(--insole-l);color:var(--insole-d)}
 .b-지출{background:var(--warn-bg);color:#633806}
@@ -273,6 +278,7 @@ textarea.finp{resize:vertical;min-height:56px}
     </div>
     <div class="fg"><label class="flbl">처방 내용</label><textarea class="finp" id="ins-rx" rows="2" placeholder="무릎 내측 통증, 회내족 보정"></textarea></div>
     <div class="fg"><label class="flbl">메모</label><textarea class="finp" id="ins-memo" rows="2"></textarea></div>
+    <div class="fg"><label class="flbl" style="color:var(--warn)">수정 예약일 <span style="font-size:9px;color:var(--muted)">(제작 후 수정 시기)</span></label><input class="finp" type="date" id="ins-revdate"></div>
     <div class="mact"><button class="btn" onclick="closeM('m-insole')">취소</button><button class="btn btn-i" onclick="saveInsole()">저장</button></div>
   </div>
 </div>
@@ -284,6 +290,7 @@ textarea.finp{resize:vertical;min-height:56px}
     <div class="mtit"><span class="mdot" style="background:var(--insole)"></span><span id="m-ins-st-tit">상태 변경</span></div>
     <div class="fg"><label class="flbl">진행 상태</label><select class="finp" id="ins-new-st"><option>접수</option><option>측정</option><option>제작중</option><option>전달완료</option></select></div>
     <div class="fg"><label class="flbl">메모</label><textarea class="finp" id="ins-st-memo" rows="2"></textarea></div>
+    <div class="fg"><label class="flbl" style="color:var(--warn)">수정 예약일 설정 <span style="font-size:9px;color:var(--muted)">(전달완료 시 수정 시기 예약)</span></label><input class="finp" type="date" id="ins-st-revdate"></div>
     <div class="mact"><button class="btn" onclick="closeM('m-ins-status')">취소</button><button class="btn btn-i" onclick="saveInsoleStatus()">저장</button></div>
   </div>
 </div>
@@ -338,7 +345,7 @@ var perfData = {};
 var members = [], insoles = [], transactions = [];
 
 // ══ API 통신 (fetch - GitHub Pages 호환) ══
-var API = 'https://script.google.com/macros/s/AKfycbwUh56dZPUqjEuHF4CnDx-RI4QK3tb0cz0vJe_R42GiNWa-5jYrMTUkog3hx_MMEE_43Q/exec';
+var API = 'https://script.google.com/macros/s/AKfycbxWHEMu3InNcJYQfekKNyOkNJrbv3C4WDAkUrPZznbDkY6esEeGhqjEjnVDPDGkNheuZg/exec';
 function apiGet(action, cb) {
   fetch(API + '?action=' + action)
     .then(function(r){ return r.json(); })
@@ -376,6 +383,7 @@ function normMember(s) {
 function normInsole(i) {
   i.fee = parseInt(i.fee)||0;
   i.txLinked = (i.txLinked===true||i.txLinked==='TRUE');
+  i.revdate = i.revdate||'';
   return i;
 }
 
@@ -434,7 +442,12 @@ function renderDash() {
   html += '<div class="sbox st"><div class="slbl">활성 회원</div><div class="sval">'+active.length+'<span style="font-size:13px">명</span></div><div class="ssub">전체 '+ms.length+'명</div></div>';
   html += '<div class="sbox st"><div class="slbl">트레이닝비</div><div class="sval">'+Math.round(tRev/10000)+'<span style="font-size:13px">만</span></div><div class="ssub">누적</div></div>';
   html += '<div class="sbox si"><div class="slbl">인솔 수입</div><div class="sval">'+Math.round(iRev/10000)+'<span style="font-size:13px">만</span></div><div class="ssub">누적</div></div>';
-  html += '<div class="sbox si"><div class="slbl">인솔 진행중</div><div class="sval">'+inProg.length+'<span style="font-size:13px">건</span></div><div class="ssub">전체 '+ins.length+'건</div></div>';
+  var revCount = fI().filter(function(i){
+    if(!i.revdate) return false;
+    var diff = Math.ceil((new Date(i.revdate) - new Date())/(1000*60*60*24));
+    return diff <= 7;
+  }).length;
+  html += '<div class="sbox si"><div class="slbl">수정 임박</div><div class="sval" style="color:'+(revCount>0?'var(--warn)':'var(--insole-d)')+'">'+revCount+'<span style="font-size:13px">건</span></div><div class="ssub">D-7 이하</div></div>';
   html += '</div>';
   html += '<div class="card ct"><div class="ctit">오늘 트레이닝 <span style="font-size:11px;color:var(--muted)">'+(today.getMonth()+1)+'/'+today.getDate()+' '+DAYS[today.getDay()]+'요일</span></div>';
   if(!todayMs.length) html += '<div class="empty">오늘 트레이닝 없음</div>';
@@ -462,9 +475,30 @@ function renderDash() {
   if(!alerts.length) html += '<div class="empty">주의 대상 없음</div>';
   else alerts.forEach(function(s){ html += '<div class="alrow"><span style="font-weight:600">'+s.name+'</span><span>잔여 <strong>'+s.remain+'회</strong></span><span style="color:var(--muted);font-size:10px">'+s.days+' '+s.time+'</span></div>'; });
   html += '</div>';
-  html += '<div class="card ci"><div class="ctit">인솔 현황</div>';
-  if(!inProg.length) html += '<div class="empty">진행 중 없음</div>';
-  else inProg.forEach(function(i){ html += '<div class="li"><div class="av av-i">'+i.name[0]+'</div><div class="im"><div class="in">'+i.name+'</div><div class="is">납기 '+i.due+'</div></div><div class="ir"><span class="bdg b-'+i.status+'">'+i.status+'</span></div></div>'; });
+  // 수정 임박 (D-7 이하)
+  var now = new Date();
+  var revAlerts = fI().filter(function(i){
+    if(!i.revdate) return false;
+    var diff = Math.ceil((new Date(i.revdate) - now)/(1000*60*60*24));
+    return diff <= 7;
+  }).sort(function(a,b){
+    return new Date(a.revdate) - new Date(b.revdate);
+  });
+  html += '<div class="card ci"><div class="ctit">인솔 수정 임박 <span style="font-size:11px;color:var(--warn)">D-7 이하</span></div>';
+  if(!revAlerts.length) html += '<div class="empty">수정 임박 없음</div>';
+  else revAlerts.forEach(function(i){
+    var diff = Math.ceil((new Date(i.revdate) - now)/(1000*60*60*24));
+    var label = diff < 0 ? '수정 기한 초과!' : diff === 0 ? '오늘 수정!' : 'D-'+diff;
+    var col = diff < 0 ? 'var(--danger)' : diff <= 3 ? 'var(--warn)' : 'var(--insole)';
+    html += '<div class="revcard">';
+    html += '<div style="display:flex;align-items:center;gap:8px">';
+    html += '<div class="av av-i">'+i.name[0]+'</div>';
+    html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">'+i.name+'</div>';
+    html += '<div style="font-size:11px;color:var(--muted)">수정 예약일: '+i.revdate+'</div></div>';
+    html += '<div style="text-align:right"><span style="font-size:14px;font-weight:700;color:'+col+'">'+label+'</span><br>';
+    html += '<button class="btn btn-xs" style="margin-top:3px" onclick="openInsoleStatus('+insoles.indexOf(i)+')">예약수정</button></div>';
+    html += '</div></div>';
+  });
   html += '</div>';
   document.getElementById('content').innerHTML = html;
 }
@@ -669,7 +703,12 @@ function renderInsole() {
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
     html += '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700">'+ins2.name+'</span><span style="font-size:11px;color:'+brColor(ins2.branch)+'">'+brLbl(ins2.branch)+'</span>'+txTag+'</div>';
     html += '<div style="display:flex;gap:4px"><span class="bdg b-'+ins2.status+'">'+ins2.status+'</span><button class="btn btn-xs" onclick="openInsoleStatus('+ri+')">상태</button><button class="btn btn-xs" onclick="openInsoleEdit('+ri+')">수정</button></div></div>';
-    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+ins2.phone+' · 접수 '+ins2.date+' · 납기 <span style="color:'+(od?'var(--danger)':'var(--text)')+';font-weight:'+(od?'600':'400')+'">'+ins2.due+(od?' ⚠':'')+'</span></div>';
+    var nowD = new Date();
+    var revDiff = ins2.revdate ? Math.ceil((new Date(ins2.revdate)-nowD)/(1000*60*60*24)) : null;
+    var revLabel = revDiff !== null ? (revDiff<0?'수정기한초과':revDiff===0?'오늘수정':'수정 D-'+revDiff) : '';
+    var revColor = revDiff !== null ? (revDiff<0?'var(--danger)':revDiff<=7?'var(--warn)':'var(--insole)') : '';
+    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+ins2.phone+' · 접수 '+ins2.date+' · 납기 <span style="color:'+(od?'var(--danger)':'var(--text)')+';font-weight:'+(od?'600':'400')+'">'+"
+ins2.due+(od?' ⚠':'')+'</span>'+(ins2.revdate?'&nbsp;·&nbsp;<span style="color:'+revColor+';font-weight:600">'+revLabel+'</span>':'')+'</div>';
     html += '<div class="igrid">';
     html += '<div class="ibox"><div class="ilbl">발 사이즈</div><div class="ival">'+ins2.size+'mm</div></div>';
     html += '<div class="ibox"><div class="ilbl">아치</div><div class="ival">'+(ins2.arch||'-')+'</div></div>';
@@ -818,6 +857,7 @@ function openInsoleModal() {
   document.getElementById('ins-branch').value=curBranch==='golf'?'용인':'목동';
   document.getElementById('ins-date').value=today.toISOString().slice(0,10);
   document.getElementById('ins-due').value='';
+  document.getElementById('ins-revdate').value='';
   openM('m-insole');
 }
 function openInsoleEdit(idx) {
@@ -829,6 +869,7 @@ function openInsoleEdit(idx) {
   document.getElementById('ins-arch').value=i.arch; document.getElementById('ins-mat').value=i.material;
   document.getElementById('ins-fee').value=i.fee; document.getElementById('ins-due').value=i.due;
   document.getElementById('ins-rx').value=i.rx; document.getElementById('ins-memo').value=i.memo;
+  document.getElementById('ins-revdate').value=i.revdate||'';
   openM('m-insole');
 }
 function saveInsole() {
@@ -846,7 +887,8 @@ function saveInsole() {
     rx:document.getElementById('ins-rx').value,
     memo:document.getElementById('ins-memo').value,
     status:editInsoleIdx>=0?insoles[editInsoleIdx].status:'접수',
-    txLinked:editInsoleIdx>=0?insoles[editInsoleIdx].txLinked:false
+    txLinked:editInsoleIdx>=0?insoles[editInsoleIdx].txLinked:false,
+    revdate:document.getElementById('ins-revdate').value
   };
   toast('저장 중…');
   apiPost({action:'saveInsole',data:data}, function(err){
@@ -861,6 +903,7 @@ function openInsoleStatus(idx) {
   document.getElementById('m-ins-st-tit').textContent=insoles[idx].name+' 상태 변경';
   document.getElementById('ins-new-st').value=insoles[idx].status;
   document.getElementById('ins-st-memo').value='';
+  document.getElementById('ins-st-revdate').value=insoles[idx].revdate||'';
   openM('m-ins-status');
 }
 function saveInsoleStatus() {
@@ -869,6 +912,8 @@ function saveInsoleStatus() {
   var memo=document.getElementById('ins-st-memo').value;
   ins.status=newSt;
   if(memo) ins.memo=(ins.memo?ins.memo+' / ':'')+memo;
+  var newRevdate = document.getElementById('ins-st-revdate').value;
+  if(newRevdate) ins.revdate = newRevdate;
   if(newSt==='전달완료'&&!ins.txLinked) {
     ins.txLinked=true;
     var tx={id:String(Date.now()),date:today.toISOString().slice(0,10),source:'인솔',item:ins.name+' 인솔 제작비',amount:ins.fee,branch:ins.branch};
