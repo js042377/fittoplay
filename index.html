@@ -484,8 +484,8 @@ var editMemberIdx = -1, editInsoleIdx = -1, pipeFilter = '', curPay = '';
 var perfData = {};
 var members = [], insoles = [], transactions = [];
 
-// ══ API 통신 (fetch - GitHub Pages) ══
-var API = 'https://script.google.com/macros/s/AKfycbxxZBddSiM4Fy49Oet4DG_5t12C-uTumNHjhSeiir5k1CgJG1PMqIC9O-gGjNKIOl1DCw/exec';
+// ══ API 통신 (Cloudflare Worker 프록시 - CORS 완전 해결) ══
+var API = 'https://fittoplay-proxy.js042377.workers.dev';
 
 function apiGet(action, cb) {
   fetch(API + '?action=' + action)
@@ -495,7 +495,11 @@ function apiGet(action, cb) {
 }
 
 function apiPost(body, cb) {
-  fetch(API, { method:'POST', body:JSON.stringify(body) })
+  fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
     .then(function(r){ return r.json(); })
     .then(function(d){ cb(null, d.data||{}); })
     .catch(function(e){ cb(null,{}); });
