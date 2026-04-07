@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FTP">
 <title>Fit to Play</title>
@@ -19,8 +19,8 @@
   --success:#1D9E75;--success-bg:#E1F5EE;
   --r:10px;--rs:7px;
 }
-html,body{height:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--text);font-size:14px;overflow:hidden}
-.app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:var(--surface);position:relative}
+html,body{height:100%;width:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--text);font-size:14px;overflow:hidden;-webkit-text-size-adjust:100%}
+.app{display:flex;flex-direction:column;height:100%;width:100%;max-width:480px;margin:0 auto;background:var(--surface);position:relative}
 .hdr{padding:12px 16px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
 .hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .brand{font-size:16px;font-weight:800;letter-spacing:-.5px}
@@ -34,8 +34,8 @@ html,body{height:100%;background:var(--bg);font-family:'Apple SD Gothic Neo','Ma
 .bpill.bt{background:var(--tennis-l);color:var(--tennis-d);border-color:var(--tennis)}
 .bpill.bg{background:var(--golf-l);color:var(--golf-d);border-color:var(--golf)}
 .bpill.ba{background:var(--insole-l);color:var(--insole-d);border-color:var(--insole)}
-.content{flex:1;overflow-y:auto;padding:14px 16px 80px;-webkit-overflow-scrolling:touch}
-.tabbar{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.content{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 16px;-webkit-overflow-scrolling:touch}
+.tabbar{flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom)}
 .ti{flex:1;display:flex;flex-direction:column;align-items:center;padding:6px 2px 5px;cursor:pointer;color:var(--faint);font-size:8px;gap:1px;border:none;background:none;font-family:inherit}
 .ti-icon{font-size:17px;line-height:1}
 .ti.at{color:var(--tennis)}.ti.ag{color:var(--golf)}.ti.ai{color:var(--insole)}
@@ -171,11 +171,16 @@ textarea.finp{resize:vertical;min-height:56px}
 .toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%) translateY(10px);background:#1C1C1A;color:#fff;padding:9px 16px;border-radius:20px;font-size:12px;font-weight:500;opacity:0;transition:all .22s;z-index:500;white-space:nowrap;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .empty{text-align:center;padding:28px;color:var(--muted);font-size:13px}
+.consult-card{background:var(--golf-l);border:1px solid var(--golf);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.consult-badge{background:var(--golf-l);color:var(--golf-d);border:1px solid var(--golf)}
 .alrow{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--warn-bg);border-radius:var(--rs);margin-bottom:6px;font-size:12px;color:#633806}
 @media(max-width:360px){.sgrid{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
+/* Apps Script 웹앱 전용 */
+google-script-module,body>div:first-child{height:100%!important}
+iframe{border:none}
 </style>
 </head>
-<body>
+<body style="margin:0;padding:0;height:100%;overflow:hidden">
 <div class="app">
   <div class="hdr">
     <div class="hdr-top">
@@ -295,16 +300,151 @@ textarea.finp{resize:vertical;min-height:56px}
   </div>
 </div>
 
+<!-- 스케줄 추가 모달 -->
+<div class="mbg" id="m-sched-add">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtit"><span class="mdot" style="background:var(--tennis)"></span><span id="m-sched-add-tit">일정 추가</span></div>
+    <!-- 탭: 기존회원 / 신규상담 -->
+    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;margin-bottom:14px">
+      <button type="button" id="sadd-tab-member" class="btn" style="flex:1;border:none;border-radius:0;padding:9px;background:var(--tennis);color:#fff;font-weight:600" onclick="switchSchedAddTab('member')">기존 회원</button>
+      <button type="button" id="sadd-tab-new" class="btn" style="flex:1;border:none;border-radius:0;padding:9px;background:var(--bg);color:var(--muted);font-weight:600" onclick="switchSchedAddTab('new')">신규 상담</button>
+    </div>
+    <!-- 기존 회원 패널 -->
+    <div id="sadd-panel-member">
+      <div class="fg"><label class="flbl">회원 선택</label>
+        <select class="finp" id="sadd-member-sel">
+          <option value="">-- 회원 선택 --</option>
+        </select>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">날짜</label><input class="finp" type="date" id="sadd-date"></div>
+        <div class="fg"><label class="flbl">시간</label><input class="finp" type="time" id="sadd-time" placeholder="10:00"></div>
+      </div>
+      <div class="fg"><label class="flbl">이 요일을 정기 요일에 추가</label>
+        <select class="finp" id="sadd-add-day">
+          <option value="">추가 안 함 (1회성)</option>
+          <option value="yes">이 요일을 정기 요일에 추가</option>
+        </select>
+      </div>
+      <div class="fg"><label class="flbl">메모</label><input class="finp" id="sadd-memo" placeholder="특이사항"></div>
+    </div>
+    <!-- 신규 상담 패널 -->
+    <div id="sadd-panel-new" style="display:none">
+      <div class="frow">
+        <div class="fg"><label class="flbl">이름</label><input class="finp" id="sadd-new-name" placeholder="홍길동"></div>
+        <div class="fg"><label class="flbl">연락처</label><input class="finp" id="sadd-new-phone" placeholder="010-0000-0000"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">날짜</label><input class="finp" type="date" id="sadd-new-date"></div>
+        <div class="fg"><label class="flbl">시간</label><input class="finp" type="time" id="sadd-new-time" placeholder="10:00"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">지점</label>
+          <select class="finp" id="sadd-new-branch">
+            <option value="목동">테니스(목동)</option>
+            <option value="용인">골프(용인)</option>
+          </select>
+        </div>
+        <div class="fg"><label class="flbl">유형</label>
+          <select class="finp" id="sadd-new-type">
+            <option>신규상담</option><option>체험레슨</option><option>재등록상담</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="flbl">메모</label><textarea class="finp" id="sadd-new-memo" rows="2" placeholder="상담 내용, 관심 사항 등"></textarea></div>
+    </div>
+    <div class="mact">
+      <button class="btn" onclick="closeM('m-sched-add')">취소</button>
+      <button class="btn btn-t" onclick="saveSchedAdd()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 트레이닝 스케줄 수정 -->
+<div class="mbg" id="m-schedule-edit">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtit"><span class="mdot" style="background:var(--tennis)"></span><span id="m-sched-tit">트레이닝 수정</span></div>
+    <div class="frow">
+      <div class="fg"><label class="flbl">트레이닝 요일</label><input class="finp" id="se-days" placeholder="월,수,금"></div>
+      <div class="fg"><label class="flbl">트레이닝 시간</label><input class="finp" id="se-time" placeholder="10:00"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="flbl">총 회차</label><input class="finp" type="number" id="se-total"></div>
+      <div class="fg"><label class="flbl">잔여 회차</label><input class="finp" type="number" id="se-remain"></div>
+    </div>
+    <div class="fg"><label class="flbl">상태</label>
+      <select class="finp" id="se-status">
+        <option>활성</option><option>일시정지</option><option>종료</option>
+      </select>
+    </div>
+    <div class="mact">
+      <button class="btn" onclick="closeM('m-schedule-edit')">취소</button>
+      <button class="btn btn-t" onclick="saveScheduleEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 스케줄 추가 모달 -->
+<div class="mbg" id="m-add-sched">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtit"><span class="mdot" style="background:var(--tennis)"></span><span id="as-tit">일정 추가</span></div>
+    <input type="hidden" id="as-dow">
+    <input type="hidden" id="as-day">
+    <div class="fg">
+      <label class="flbl">회원 선택</label>
+      <select class="finp" id="as-member"></select>
+    </div>
+    <div class="fg">
+      <label class="flbl">트레이닝 시간</label>
+      <input class="finp" type="time" id="as-time" placeholder="10:00">
+    </div>
+    <div style="font-size:11px;color:var(--muted);padding:6px 0 4px">
+      ※ 선택한 회원의 트레이닝 요일에 이 요일이 추가되고 시간이 변경됩니다
+    </div>
+    <div class="mact">
+      <button class="btn" onclick="closeM('m-add-sched')">취소</button>
+      <button class="btn btn-t" onclick="saveAddSched()">추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- 카카오 알림톡 -->
 <div class="mbg" id="m-kakao">
   <div class="msheet" style="max-height:92vh">
     <div class="mhandle"></div>
     <div class="mtit"><span class="mdot" style="background:#FFCD00"></span>알림톡 문자 생성</div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
       <button class="btn btn-sm" onclick="showKakaoTpl(0)">잔여회차 안내</button>
       <button class="btn btn-sm" onclick="showKakaoTpl(1)">납기임박 안내</button>
       <button class="btn btn-sm" onclick="showKakaoTpl(2)">트레이닝 등록</button>
       <button class="btn btn-sm" onclick="showKakaoTpl(3)">인솔 완료</button>
+      <button class="btn btn-sm btn-t" onclick="showKakaoTpl(4)">📅 스케줄 문자</button>
+    </div>
+    <!-- 스케줄 문자 옵션 패널 -->
+    <div id="schedule-msg-panel" style="display:none;background:var(--bg);border-radius:var(--rs);padding:10px 12px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+        <select class="finp" id="sched-member" style="flex:1;min-width:120px;font-size:12px;padding:6px 8px" onchange="renderSchedPreview()">
+          <option value="">-- 회원 선택 --</option>
+        </select>
+        <select class="finp" id="sched-mode" style="width:110px;font-size:12px;padding:6px 8px" onchange="renderSchedPreview()">
+          <option value="month">이번달</option>
+          <option value="all">전체 회차</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">시작일</div>
+          <input type="date" class="finp" id="sched-start" style="font-size:12px;padding:6px 8px;width:100%" onchange="renderSchedPreview()">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">종료일</div>
+          <input type="date" class="finp" id="sched-end" style="font-size:12px;padding:6px 8px;width:100%" onchange="renderSchedPreview()">
+        </div>
+      </div>
+      <div id="sched-preview"></div>
     </div>
     <div id="kakao-area"></div>
     <div class="mact"><button class="btn" onclick="closeM('m-kakao')">닫기</button></div>
@@ -344,27 +484,18 @@ var editMemberIdx = -1, editInsoleIdx = -1, pipeFilter = '', curPay = '';
 var perfData = {};
 var members = [], insoles = [], transactions = [];
 
-// ══ API 통신 ══
-var API = 'https://script.google.com/macros/s/AKfycbxJc6Ie_5WMjCgKAXTq10zJUGuIiHr6inomvTRFAHaepmxiJcs2CCRWgKhvY7uxZVv0EQ/exec';
+// ══ API 통신 (fetch - GitHub Pages) ══
+var API = 'https://script.google.com/macros/s/AKfycbxxZBddSiM4Fy49Oet4DG_5t12C-uTumNHjhSeiir5k1CgJG1PMqIC9O-gGjNKIOl1DCw/exec';
 
 function apiGet(action, cb) {
   fetch(API + '?action=' + action)
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d){
-      if(d.ok) cb(null, d.data);
-      else cb(d.error || '오류');
-    })
-    .catch(function(e){ cb(e.message || '연결 실패'); });
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.ok) cb(null,d.data); else cb(d.error||'오류'); })
+    .catch(function(e){ cb(e.message||'연결실패'); });
 }
 
 function apiPost(body, cb) {
-  fetch(API, {
-    method: 'POST',
-    body: JSON.stringify(body)
-  })
+  fetch(API, { method:'POST', body:JSON.stringify(body) })
     .then(function(r){ return r.json(); })
     .then(function(d){ cb(null, d.data||{}); })
     .catch(function(e){ cb(null,{}); });
@@ -588,32 +719,159 @@ function renderSchedule() {
 function selDay(d, dow) {
   calSelDay = d;
   var isTd = calY===today.getFullYear()&&calM===today.getMonth()&&d===today.getDate();
-  var ms2 = fM().filter(function(s){ return s.status!=='종료'&&s.days&&s.days.split(',').map(function(x){return x.trim();}).indexOf(DAYS[dow])>=0; });
+  var dowName = DAYS[dow];
+  var ms2 = fM().filter(function(s){
+    return s.status!=='종료'&&s.days&&s.days.split(',').map(function(x){return x.trim();}).indexOf(dowName)>=0;
+  });
   ms2.sort(function(a,b){ return a.time.localeCompare(b.time); });
-  var html = '<div class="ctit">'+(calM+1)+'월 '+d+'일 '+DAYS[dow]+'요일 <span style="font-size:11px;color:var(--muted)">'+ms2.length+'명</span></div>';
-  if(!ms2.length) html += '<div class="empty">트레이닝 없음</div>';
-  else if(isTd) {
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+  html += '<div class="ctit" style="margin-bottom:0">'+(calM+1)+'월 '+d+'일 '+dowName+'요일 <span style="font-size:11px;color:var(--muted)">'+ms2.length+'명</span></div>';
+  html += '<button class="btn btn-sm btn-t" onclick="openAddSched('+d+','+dow+')">+ 추가</button></div>';
+
+  if(!ms2.length) {
+    html += '<div class="empty">트레이닝 없음</div>';
+  } else if(isTd) {
     ms2.forEach(function(s){
-      var idx = members.indexOf(s);
+      var idx2 = members.indexOf(s);
       var att = s._att||'', done = s._done||false;
       var golf = isGolf(s.branch);
-      html += '<div class="lcard '+(golf?'golf':'')+'">';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="av '+(golf?'av-g':'av-t')+'">'+s.name[0]+'</div>';
-      html += '<div style="flex:1"><div style="font-size:14px;font-weight:600">'+s.name+'</div><div style="font-size:11px;color:var(--muted)">'+s.time+' · 잔여 <strong>'+s.remain+'회</strong></div></div>';
-      html += '<span class="bdg '+(done?'b-end':parseInt(s.remain)<=3?'b-pse':'b-act')+'">'+(done?'완료':s.remain+'회')+'</span></div>';
+      html += '<div class="lcard '+(golf?'golf':'')+'" style="margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+      html += '<div class="av '+(golf?'av-g':'av-t')+'">'+s.name[0]+'</div>';
+      html += '<div style="flex:1"><div style="font-size:14px;font-weight:600">'+s.name+'</div>';
+      html += '<div style="font-size:11px;color:var(--muted)">'+s.time+' · 잔여 <strong>'+s.remain+'회</strong></div></div>';
+      html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">';
+      html += '<span class="bdg '+(done?'b-end':parseInt(s.remain)<=3?'b-pse':'b-act')+'">'+(done?'완료':s.remain+'회')+'</span>';
+      html += '<div style="display:flex;gap:3px">';
+      html += '<button class="btn btn-xs" style="color:var(--tennis);border-color:var(--tennis)" onclick="openSchedEdit('+idx2+')">수정</button>';
+      html += '<button class="btn btn-xs" style="color:var(--danger);border-color:var(--danger)" onclick="removeSchedDay('+idx2+','+dow+','+d+')">삭제</button>';
+      html += '</div></div></div>';
       html += '<div class="att-row">';
-      ['출석','결석','보강'].forEach(function(a){ html += '<button class="att-btn '+(att===a?'s-'+a:'')+'" onclick="setAttCal('+idx+',\''+a+'\','+d+','+dow+')">'+a+'</button>'; });
+      ['출석','결석','보강'].forEach(function(a){
+        var aIdx2 = ['출석','결석','보강'].indexOf(a);
+        var aCls = att===a?'att-btn s-'+a:'att-btn';
+        html += '<button class="'+aCls+'" onclick="setAttCal('+idx2+','+aIdx2+','+d+','+dow+')">'+a+'</button>';
+      });
       html += '</div>';
-      html += '<button class="done-btn '+(golf?'golf':'')+'" '+(done?'disabled':'')+' onclick="completeTrainCal('+idx+','+d+','+dow+')">'+(done?'✓ 완료됨':'트레이닝 완료 (회차 차감)')+'</button>';
+      html += '<button class="done-btn '+(golf?'golf':'')+'" '+(done?'disabled':'')+' onclick="completeTrainCal('+idx2+','+d+','+dow+')">';
+      html += (done?'✓ 완료됨':'트레이닝 완료 (회차 차감)')+'</button>';
       html += '</div>';
     });
   } else {
-    ms2.forEach(function(s){ html += '<div class="li"><div class="av '+(isGolf(s.branch)?'av-g':'av-t')+'">'+s.name[0]+'</div><div class="im"><div class="in">'+s.name+'</div><div class="is">'+s.type+' · 잔여 '+s.remain+'회</div></div><div class="ir" style="font-size:13px;font-weight:600">'+s.time+'</div></div>'; });
+    ms2.forEach(function(s){
+      var idx2 = members.indexOf(s);
+      html += '<div class="li">';
+      html += '<div class="av '+(isGolf(s.branch)?'av-g':'av-t')+'">'+s.name[0]+'</div>';
+      html += '<div class="im"><div class="in">'+s.name+'</div>';
+      html += '<div class="is">'+s.type+' · 잔여 '+s.remain+'회 · '+s.time+'</div></div>';
+      html += '<div class="ir" style="display:flex;gap:4px">';
+      html += '<button class="btn btn-xs" style="color:var(--tennis);border-color:var(--tennis)" onclick="openSchedEdit('+idx2+')">수정</button>';
+      html += '<button class="btn btn-xs" style="color:var(--danger);border-color:var(--danger)" onclick="removeSchedDay('+idx2+','+dow+','+d+')">삭제</button>';
+      html += '</div></div>';
+    });
   }
   var card = document.getElementById('sel-day-card');
   if(card) card.innerHTML = html;
 }
-function setAttCal(idx, a, d, dow) { members[idx]._att = a; selDay(d, dow); }
+
+// ── 스케줄 추가 모달 열기 ──────────────────
+function openAddSched(d, dow) {
+  var dowName = DAYS[dow];
+  document.getElementById('as-tit').textContent = (calM+1)+'월 '+d+'일 '+dowName+'요일 추가';
+  // 그날 없는 회원만 필터
+  var alreadyIn = fM().filter(function(s){
+    return s.status!=='종료'&&s.days&&s.days.split(',').map(function(x){return x.trim();}).indexOf(dowName)>=0;
+  }).map(function(s){ return s.id; });
+  var available = fM().filter(function(s){
+    return s.status==='활성' && alreadyIn.indexOf(s.id)<0;
+  });
+  var sel = document.getElementById('as-member');
+  sel.innerHTML = '<option value="">-- 회원 선택 --</option>' +
+    available.map(function(s){
+      return '<option value="'+members.indexOf(s)+'">'+s.name+' (현재: '+s.days+' '+s.time+')</option>';
+    }).join('');
+  document.getElementById('as-time').value = '';
+  document.getElementById('as-dow').value = dow;
+  document.getElementById('as-day').value = d;
+  openM('m-add-sched');
+}
+
+// ── 스케줄 추가 저장 ──────────────────────
+function saveAddSched() {
+  var selEl = document.getElementById('as-member');
+  var timeEl = document.getElementById('as-time');
+  var dow = parseInt(document.getElementById('as-dow').value);
+  var d = parseInt(document.getElementById('as-day').value);
+  var idx2 = parseInt(selEl.value);
+  if(isNaN(idx2)||selEl.value==='') { toast('회원을 선택하세요'); return; }
+  if(!timeEl.value) { toast('시간을 입력하세요'); return; }
+
+  var s = members[idx2];
+  var dowName = DAYS[dow];
+  // 요일 추가
+  var days = s.days ? s.days.split(',').map(function(x){return x.trim();}).filter(Boolean) : [];
+  if(days.indexOf(dowName)<0) days.push(dowName);
+  s.days = days.join(',');
+  s.time = timeEl.value;
+
+  toast('저장 중…');
+  apiPost({action:'saveStudent', data:s}, function(err){
+    if(err){ toast('오류: '+err); return; }
+    closeM('m-add-sched');
+    toast('✓ '+s.name+' 일정 추가됐습니다');
+    selDay(d, dow);
+  });
+}
+
+// ── 스케줄에서 해당 요일 삭제 ─────────────
+function removeSchedDay(idx2, dow, d) {
+  var s = members[idx2];
+  var dowName = DAYS[dow];
+  if(!confirm(s.name+'의 '+dowName+'요일 일정을 삭제하시겠습니까?')) return;
+  var days = s.days ? s.days.split(',').map(function(x){return x.trim();}).filter(function(x){ return x!==dowName; }) : [];
+  s.days = days.join(',');
+  toast('저장 중…');
+  apiPost({action:'saveStudent', data:s}, function(err){
+    if(err){ toast('오류: '+err); return; }
+    toast('✓ '+s.name+' '+dowName+'요일 일정 삭제됐습니다');
+    selDay(d, dow);
+  });
+}
+
+
+// ── 스케줄 수정 모달 ──────────────────────
+var schedEditIdx = -1;
+function openSchedEdit(idx) {
+  schedEditIdx = idx;
+  var s = members[idx];
+  document.getElementById('m-sched-tit').textContent = s.name + ' 일정 수정';
+  document.getElementById('se-days').value  = s.days   || '';
+  document.getElementById('se-time').value  = s.time   || '';
+  document.getElementById('se-total').value  = s.total  || 0;
+  document.getElementById('se-remain').value = s.remain || 0;
+  document.getElementById('se-status').value = s.status || '활성';
+  openM('m-schedule-edit');
+}
+function saveScheduleEdit() {
+  if(schedEditIdx < 0) return;
+  var s = members[schedEditIdx];
+  s.days   = document.getElementById('se-days').value.trim();
+  s.time   = document.getElementById('se-time').value.trim();
+  s.total  = parseInt(document.getElementById('se-total').value)  || s.total;
+  s.remain = parseInt(document.getElementById('se-remain').value) || s.remain;
+  s.status = document.getElementById('se-status').value;
+  toast('저장 중…');
+  apiPost({action:'saveStudent', data:s}, function(err){
+    if(err){ toast('오류: '+err); return; }
+    closeM('m-schedule-edit');
+    toast('✓ ' + s.name + ' 일정 수정됐습니다');
+    render();
+  });
+}
+
+var ATT_NAMES = ['출석','결석','보강'];
+function setAttCal(idx, aIdx, d, dow) { var a = (typeof aIdx==='number') ? ATT_NAMES[aIdx] : aIdx; members[idx]._att = a; selDay(d, dow); }
 function completeTrainCal(idx, d, dow) {
   var s = members[idx];
   if(s._done) return;
@@ -975,8 +1233,33 @@ function checkDueBanner() {
 }
 
 // ══ 카카오 알림톡 ══
-function openKakao() { openM('m-kakao'); showKakaoTpl(0); }
+function openKakao() {
+  openM('m-kakao');
+  // 회원 셀렉트 채우기
+  var sel = document.getElementById('sched-member');
+  if(sel) {
+    var ms = fM().filter(function(s){ return s.status==='활성'; });
+    sel.innerHTML = '<option value="">-- 회원 선택 --</option>' +
+      ms.map(function(s,i){
+        return '<option value="'+members.indexOf(s)+'">'+s.name+' ('+s.days+' '+s.time+')</option>';
+      }).join('');
+  }
+  // 이번달 기본값 세팅
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth();
+  var firstDay = new Date(y, m, 1);
+  var lastDay = new Date(y, m+1, 0);
+  var sd = document.getElementById('sched-start');
+  var ed = document.getElementById('sched-end');
+  if(sd) sd.value = y+'-'+String(m+1).padStart(2,'0')+'-01';
+  if(ed) ed.value = y+'-'+String(m+1).padStart(2,'0')+'-'+String(lastDay.getDate()).padStart(2,'0');
+  showKakaoTpl(0);
+}
 function showKakaoTpl(idx) {
+  // 스케줄 패널 토글
+  var panel = document.getElementById('schedule-msg-panel');
+  if(panel) panel.style.display = (idx===4) ? 'block' : 'none';
+  if(idx===4) { renderSchedPreview(); return; }
   var ms2=fM().filter(function(s){return s.status==='활성';});
   var lowR=fM().filter(function(s){return parseInt(s.remain)<=3&&s.status==='활성';});
   var dueA=[];
@@ -1024,6 +1307,59 @@ function showKakaoTpl(idx) {
     });
   }
   area.innerHTML=html;
+}
+
+// ══ 스케줄 문자 생성 ══
+function renderSchedPreview() {
+  var selEl = document.getElementById('sched-member');
+  var modeEl = document.getElementById('sched-mode');
+  var startEl = document.getElementById('sched-start');
+  var endEl = document.getElementById('sched-end');
+  var preview = document.getElementById('sched-preview');
+  if(!selEl || !preview) return;
+
+  var idx = selEl.value;
+  if(idx === '') { preview.innerHTML = '<div class="empty">회원을 선택하세요</div>'; return; }
+
+  var s = members[parseInt(idx)];
+  if(!s) return;
+
+  var mode = modeEl ? modeEl.value : 'month';
+  var startDate = startEl && startEl.value ? new Date(startEl.value) : new Date();
+  var endDate = endEl && endEl.value ? new Date(endEl.value) : new Date();
+  endDate.setHours(23,59,59);
+
+  var dayNames = ['일','월','화','수','목','금','토'];
+  var trainingDays = (s.days||'').split(/[,，]/).map(function(d){ return d.trim(); }).filter(Boolean);
+  var dates = [];
+  var cur = new Date(startDate);
+  var limit = mode === 'all' ? (parseInt(s.total)||10) : 999;
+
+  while(cur <= endDate && dates.length < limit) {
+    var dow = cur.getDay();
+    if(trainingDays.indexOf(dayNames[dow]) >= 0) {
+      dates.push(new Date(cur));
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+
+  if(!dates.length) {
+    preview.innerHTML = '<div class="empty">해당 기간에 트레이닝 날짜 없음</div>';
+    return;
+  }
+
+  var modeLabel = mode==='all' ? '전체 '+s.total+'회' : (startDate.getMonth()+1)+'월';
+  var nl = '\n';
+  var dateLines = dates.map(function(d,i){
+    var m2 = d.getMonth()+1;
+    var dd2 = d.getDate();
+    var dw = dayNames[d.getDay()];
+    return (i+1)+'. '+m2+'/'+dd2+'('+dw+') '+s.time;
+  }).join(nl);
+
+  var msg = '[Fit to Play]'+nl+'안녕하세요, '+s.name+' 회원님!'+nl+nl+modeLabel+' 트레이닝 일정을 안내드립니다.'+nl+nl+dateLines+nl+nl+'총 '+dates.length+'회 / 잔여 '+s.remain+'회'+nl+nl+'문의사항은 언제든지 연락주세요!';
+
+  preview.innerHTML = makeKakaoCard(s.name, s.phone, msg);
 }
 function makeKakaoCard(name,phone,msg) {
   return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px">'+
@@ -1114,7 +1450,7 @@ function printReport() {
   var w=window.open('','_blank');
   w.document.write('<html><head><meta charset="UTF-8"><title>'+title+'</title>');
   w.document.write('<style>body{font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid #eee}@media print{button{display:none}}</style>');
-  w.document.write('</head><body><h2 style="color:#1D9E75">Fit to Play — '+title+'</h2>');
+  w.document.write('</head><body style="margin:0;padding:0;height:100%;overflow:hidden"><h2 style="color:#1D9E75">Fit to Play — '+title+'</h2>');
   w.document.write(document.getElementById('rpt-content').innerHTML);
   w.document.write('<script>window.onload=function(){window.print();}<\/script></body></html>');
   w.document.close();
@@ -1126,6 +1462,15 @@ function closeM(id){document.getElementById(id).classList.remove('open');}
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
 
 // ══ 시작 ══
+// Apps Script 웹앱 높이 조정
+function fixHeight() {
+  var h = window.innerHeight || document.documentElement.clientHeight || 600;
+  var app = document.querySelector('.app');
+  if(app) { app.style.height = h + 'px'; }
+}
+fixHeight();
+window.addEventListener('resize', fixHeight);
+window.addEventListener('orientationchange', function(){ setTimeout(fixHeight, 150); });
 render();
 syncAll();
 </script>
