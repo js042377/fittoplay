@@ -345,24 +345,19 @@ var perfData = {};
 var members = [], insoles = [], transactions = [];
 
 // ══ API 통신 ══
-var API = 'https://script.google.com/macros/s/AKfycbxWHEMu3InNcJYQfekKNyOkNJrbv3C4WDAkUrPZznbDkY6esEeGhqjEjnVDPDGkNheuZg/exec';
+var API = 'https://script.google.com/macros/s/AKfycbxJc6Ie_5WMjCgKAXTq10zJUGuIiHr6inomvTRFAHaepmxiJcs2CCRWgKhvY7uxZVv0EQ/exec';
 
 function apiGet(action, cb) {
-  // JSONP 방식 - CORS 문제 없이 Apps Script 호출
-  var cbName = '_cb' + Date.now();
-  var script = document.createElement('script');
-  var done = false;
-  var timer = setTimeout(function(){
-    if(!done){ done=true; delete window[cbName]; script.remove(); cb('시간 초과'); }
-  }, 10000);
-  window[cbName] = function(res){
-    if(done) return; done=true;
-    clearTimeout(timer); delete window[cbName]; script.remove();
-    if(res && res.ok) cb(null, res.data);
-    else cb((res&&res.error)||'오류');
-  };
-  script.src = API + '?action=' + action + '&callback=' + cbName;
-  document.head.appendChild(script);
+  fetch(API + '?action=' + action)
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d){
+      if(d.ok) cb(null, d.data);
+      else cb(d.error || '오류');
+    })
+    .catch(function(e){ cb(e.message || '연결 실패'); });
 }
 
 function apiPost(body, cb) {
